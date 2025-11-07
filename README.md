@@ -1,6 +1,6 @@
 # Bug Hunter AI — MVP structure
 
-> Projeto hobby (2 participantes) — orquestrador de automação de bug bounty baseado em PentestGPT + OpenAI GPT-5.
+> Orquestrador de automação de bug bounty baseado em PentestGPT + OpenAI GPT-5.
 
 ---
 
