@@ -1,0 +1,41 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: infra/web/Dockerfile
+    env_file: .env
+    environment:
+      - OPENAI_API_KEY
+      - ALLOWED_TARGETS
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - ./examples:/app/examples
+    depends_on:
+      - runner
+
+  runner:
+    build:
+      context: .
+      dockerfile: infra/runner/Dockerfile
+    env_file: .env         # <── idem
+    environment:
+      - RUNNER_TIMEOUT
+      - ALLOWED_TARGETS
+    volumes:
+      - ./runner:/runner
+
+  minio:
+    image: minio/minio:latest
+    command: server /data
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+    volumes:
+      - minio_data:/data
+
+volumes:
+  minio_data:

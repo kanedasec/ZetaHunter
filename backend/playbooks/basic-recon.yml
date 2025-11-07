@@ -1,0 +1,16 @@
+# Basic reconnaissance playbook (example)
+name: basic-recon
+description: >
+  Minimal recon playbook for lab testing. Runs a basic HTTP probe
+  and then executes a safe Juice Shop test script.
+steps:
+  - id: http_probe
+    type: http_get
+    description: "GET / on target and collect status and title"
+    params:
+      path: "/"
+  - id: juice_shop_test
+    type: run_script
+    description: "Run local Juice Shop test script (safe -- non-exploitive)"
+    params:
+      script: "/app/examples/juice_shop_test.py"
