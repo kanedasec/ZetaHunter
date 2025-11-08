@@ -1,4 +1,4 @@
-# Bug Hunter AI — Quickstart (Lab)
+# Zeta Hunter — Quickstart (Lab)
 
 **Aviso:** somente para uso em ambientes controlados e targets autorizados (ex.: Juice Shop local). Não utilize essa ferramenta contra alvos sem permissão explícita.
 
