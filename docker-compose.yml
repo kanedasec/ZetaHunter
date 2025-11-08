@@ -7,19 +7,21 @@ services:
     environment:
       - OPENAI_API_KEY
       - ALLOWED_TARGETS
+      - DB_PATH
     ports:
       - "8000:8000"
     volumes:
-      - ./backend:/app
-      - ./examples:/app/examples
+      - ./backend:/apps
+      - ./data:/app/data
     depends_on:
       - runner
+
 
   runner:
     build:
       context: .
       dockerfile: infra/runner/Dockerfile
-    env_file: .env         # <── idem
+    env_file: .env
     environment:
       - RUNNER_TIMEOUT
       - ALLOWED_TARGETS

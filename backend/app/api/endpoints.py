@@ -1,40 +1,28 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 import uuid
 import subprocess
 import os
 import json
 from pathlib import Path
+from app.core.db import insert_job, update_job, insert_job_steps, get_job as db_get_job, list_jobs as db_list_jobs
 
 router = APIRouter()
-JOBS = {}
 
 class JobCreate(BaseModel):
     target: str
     playbook: str = "basic-recon"
 
 def resolve_paths():
-    """Resolve executor and playbook paths for both container and host layouts.
-    Container layout (web image):
-        /app/app/api/endpoints.py   (this file)
-        /app/app/workers/executor.py
-        /app/playbooks/basic-recon.yml
-    Host layout (repo root):
-        backend/app/api/endpoints.py (this file)
-        backend/app/workers/executor.py
-        backend/playbooks/basic-recon.yml
-    """
     this_file = Path(__file__).resolve()
-
-    # Container-first guess
+    # Layout do container
     try_root = this_file.parents[2]  # /app
     exec_path = try_root / "app" / "workers" / "executor.py"
     pb_path   = try_root / "playbooks" / "basic-recon.yml"
     if exec_path.exists() and pb_path.exists():
         return exec_path, pb_path
-
-    # Host-layout fallback
-    try_root2 = this_file.parents[3]  # repo root when running on host
+    # Layout do host
+    try_root2 = this_file.parents[3]  # repo root
     exec_path2 = try_root2 / "backend" / "app" / "workers" / "executor.py"
     pb_path2   = try_root2 / "backend" / "playbooks" / "basic-recon.yml"
     return exec_path2, pb_path2
@@ -46,7 +34,7 @@ async def create_job(j: JobCreate):
         raise HTTPException(status_code=400, detail="target not allowed")
 
     job_id = str(uuid.uuid4())
-    JOBS[job_id] = {"status": "running", "target": j.target}
+    insert_job(job_id, j.target, j.playbook, "running", None)
 
     try:
         executor, playbook_file = resolve_paths()
@@ -61,8 +49,7 @@ async def create_job(j: JobCreate):
         )
 
         if res.returncode != 0:
-            JOBS[job_id]["status"] = "error"
-            JOBS[job_id]["stderr"] = res.stderr
+            update_job(job_id, "error", {"stderr": res.stderr, "stdout": res.stdout})
             return {"job_id": job_id, "status": "error", "stderr": res.stderr, "stdout": res.stdout}
 
         try:
@@ -70,17 +57,23 @@ async def create_job(j: JobCreate):
         except Exception:
             parsed = {"raw_stdout": res.stdout}
 
-        JOBS[job_id]["status"] = "done"
-        JOBS[job_id]["result"] = parsed
+        steps = parsed.get("steps") or []
+        insert_job_steps(job_id, steps)
+
+        update_job(job_id, "done", parsed)
         return {"job_id": job_id, "status": "done", "result": parsed}
 
     except Exception as e:
-        JOBS[job_id]["status"] = "error"
-        JOBS[job_id]["error"] = str(e)
+        update_job(job_id, "error", {"error": str(e)})
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/jobs/{job_id}")
 async def get_job(job_id: str):
-    if job_id not in JOBS:
+    job = db_get_job(job_id)
+    if not job:
         raise HTTPException(status_code=404, detail="job not found")
-    return JOBS[job_id]
+    return job
+
+@router.get("/jobs")
+async def list_jobs(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)):
+    return db_list_jobs(limit=limit, offset=offset)

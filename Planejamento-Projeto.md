@@ -59,13 +59,27 @@ bug-hunter-ai/
 
 ---
 
-## Próximos passos
+## 🧩 Linha do tempo do que já foi feito
+# Etapa	Status	Descrição
+1. Setup e estrutura inicial	✅	Criação da base FastAPI + Docker + executor independente (executor.py).
+2. Execução local de playbooks	✅	Implementado basic-recon.yml com http_get e run_script (rodando juice_shop_test.py).
+3. Orquestração de jobs (API)	✅	Endpoint /jobs cria e executa playbook, retornando JSON.
+4. Validação de targets seguros	✅	Campo ALLOWED_TARGETS no .env controla onde é permitido executar.
+5. Path resolving container/host	✅	Corrigido para funcionar tanto local quanto dentro do container.
+6. Docker Compose + Juice Shop	✅	Ambiente completo para testes (web, runner, minio, juice-shop).
+7. Persistência mínima (SQLite)	✅	Jobs gravados em data/app.db, listagem e consulta funcionando (/jobs, /jobs/{id}).
+8. Retorno estruturado JSON	✅	Executor retorna resultados por step, com evidências e status.
 
-* Implementar parser de resposta do GPT-5 e validações (blacklist/regex) no worker.
-* Substituir runner por microVM (Firecracker) ou aplicar seccomp/AppArmor.
-* Adicionar persistência (Postgres) e autenticação OIDC.
-* Implementar PentestGPT adapter.
+## 🚧 Etapas que ainda faltam (início da fase de IA)
+# Fase	Objetivo	Descrição
+9. Integração com OpenAI (GPT-5)	🧠	Fazer o backend gerar scripts automaticamente com base em prompts e contexto do target (exemplo: "escreva um script Python que teste XSS básico").
+10. PentestGPT adapter	🧩	Criar um módulo que traduz a resposta do PentestGPT em playbooks YAML — ou seja, a IA descreve o plano de ataque, e o sistema transforma isso em steps executáveis.
+11. Segurança da geração	🔒	Adicionar filtros (blacklist de comandos, sandbox, timeout, etc.) antes de executar qualquer código gerado.
+12. Auditoria de IA	🧾	Registrar cada prompt enviado, resposta do modelo e script gerado no banco (para rastreabilidade).
+13. Interface web (dashboard)	💻	Painel para visualizar jobs, logs, resultados e evidências.
+14. Pipeline de automação completa	🧬	Unir: input de target → PentestGPT cria plano → OpenAI gera scripts → executor executa → resultados retornam ao PentestGPT para decisão do próximo passo.
 
+---
 ## Arquivos e diretórios — explicação detalhada
 ### README.md
 
