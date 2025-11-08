@@ -5,7 +5,8 @@ import subprocess
 import os
 import json
 from pathlib import Path
-from app.core.db import insert_job, update_job, insert_job_steps, get_job as db_get_job, list_jobs as db_list_jobs
+from app.core.db import insert_job, update_job, insert_job_steps,get_ai_request, get_job as db_get_job, list_jobs as db_list_jobs
+from app.ai.openai_client import generate_script
 
 router = APIRouter()
 
@@ -77,3 +78,30 @@ async def get_job(job_id: str):
 @router.get("/jobs")
 async def list_jobs(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)):
     return db_list_jobs(limit=limit, offset=offset)
+
+# ---------------- AI endpoints ----------------
+
+class AIGenerateRequest(BaseModel):
+    prompt: str
+    model: str = None
+
+@router.post("/ai/generate")
+async def ai_generate(req: AIGenerateRequest):
+    if not req.prompt or not req.prompt.strip():
+        raise HTTPException(status_code=400, detail="prompt required")
+    out = generate_script(req.prompt, model=req.model)
+    # retorna sempre JSON serializável
+    return {
+        "request_id": out.get("id"),
+        "model": out.get("model"),
+        "script": out.get("script"),
+        "raw": out.get("raw_response"),
+    }
+
+
+@router.get("/ai/requests/{req_id}")
+async def ai_get(req_id: str):
+    r = get_ai_request(req_id)
+    if not r:
+        raise HTTPException(status_code=404, detail="not found")
+    return r

@@ -3,5 +3,5 @@ uvicorn[standard]
 httpx
 pydantic
 python-dotenv
-
+openai
 pyyaml

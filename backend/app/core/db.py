@@ -45,6 +45,15 @@ def init_db():
         FOREIGN KEY(job_id) REFERENCES jobs(id)
     );
     """)
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS ai_requests (
+    id TEXT PRIMARY KEY,
+    prompt TEXT NOT NULL,
+    model TEXT,
+    response TEXT,
+    created_at TEXT NOT NULL
+    );
+    """)
     conn.commit()
     conn.close()
 
@@ -118,3 +127,23 @@ def list_jobs(limit: int = 50, offset: int = 0) -> list[dict]:
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+def insert_ai_request(req_id: str, prompt: str, model: str, response: str):
+    conn = get_conn()
+    cur = conn.cursor()
+    now = datetime.utcnow().isoformat()
+    cur.execute(
+        "INSERT OR REPLACE INTO ai_requests (id, prompt, model, response, created_at) VALUES (?,?,?,?,?)",
+        (req_id, prompt, model, response, now)
+    )
+    conn.commit()
+    conn.close()
+
+def get_ai_request(req_id: str) -> dict | None:
+    conn = get_conn()
+    cur = conn.cursor()
+    row = cur.execute("SELECT * FROM ai_requests WHERE id = ?", (req_id,)).fetchone()
+    conn.close()
+    if not row:
+        return None
+    return {"id": row["id"], "prompt": row["prompt"], "model": row["model"], "response": row["response"], "created_at": row["created_at"]}
