@@ -1,0 +1,7 @@
+playbook: auto-run-a045067c
+steps:
+- id: run_generated
+  type: run_script
+  params:
+    script: /app/examples/xss_from_pentestgpt.py
+  timeout: 20

@@ -1,4 +1,32 @@
 services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: zetahunter-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./ollama:/root/.ollama   # persiste modelos no host
+    restart: unless-stopped
+    entrypoint: [ "ollama", "serve" ]
+
+  pentestgpt:
+    build:
+      context: ./infra/pentestgpt
+      dockerfile: Dockerfile
+    container_name: zetahunter-pentestgpt
+    env_file: .env
+    environment:
+      OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL}
+      CHATGPT_COOKIE: disabled
+      GEMINI_API_KEY: disabled
+      DEEPSEEK_API_KEY: disabled
+    depends_on:
+      - ollama
+    ports:
+      - "8080:8080"        # se quiser acessar de fora; opcional
+    restart: unless-stopped
+
   web:
     build:
       context: .
@@ -6,16 +34,21 @@ services:
     env_file: .env
     environment:
       - OPENAI_API_KEY
-      - ALLOWED_TARGETS
-      - DB_PATH
+        - OPENAI_MODEL
+        - OPENAI_FORCE_MOCK
+        - AI_PROVIDER                 
+        - OLLAMA_HOST                 
+        - OLLAMA_MODEL              
+        - DB_PATH=/app/data/app.db
     ports:
       - "8000:8000"
     volumes:
-      - ./backend:/apps
+      - ./backend:/app
+      - ./backend/examples:/app/examples
       - ./data:/app/data
     depends_on:
       - runner
-
+      - ollama
 
   runner:
     build:

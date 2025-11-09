@@ -37,10 +37,25 @@ def allowed_target(target):
     allowed = os.getenv("ALLOWED_TARGETS", "localhost,127.0.0.1").split(",")
     return any(a.strip() in target for a in allowed)
 
-def http_get(base, path):
-    url = base.rstrip('/') + path
+def http_get_resolve(base, step):
+    """
+    Resolve 'path' ou 'url' a partir do step (tanto em step['params'] quanto no topo).
+    Se 'url' for absoluto (http://...), usa direto. Caso contrário, junta com base.
+    """
+    params = step.get('params', {}) or {}
+    url_field = params.get('url') or step.get('url')
+    path_field = params.get('path') or step.get('path') or '/'
+
+    if url_field:
+        if '://' in url_field:
+            full = url_field
+        else:
+            full = base.rstrip('/') + url_field
+    else:
+        full = base.rstrip('/') + path_field
+
     try:
-        req = Request(url, headers={'User-Agent': 'BugHunterAI-executor/1.0'})
+        req = Request(full, headers={'User-Agent': 'BugHunterAI-executor/1.0'})
         with urlopen(req, timeout=10) as resp:
             content = resp.read().decode('utf-8', errors='ignore')
             status = resp.status
@@ -53,32 +68,51 @@ def http_get(base, path):
     except Exception:
         status = None
         content = ''
+
     title = ''
     if content:
         p = TitleParser()
         p.feed(content)
         title = p.title.strip()
-    return {'path': path, 'status': status, 'title': title, 'content_sample': content[:200]}
+
+    # Para manter compatibilidade com o formato antigo do retorno:
+    # reporto 'path' com o que eu usei (se foi url absoluto, mantenho em 'path' para exibir)
+    used_path = full if '://' in (url_field or '') else path_field
+    return {'path': used_path, 'status': status, 'title': title, 'content_sample': content[:200]}
+
 
 def run_script(script_path, target):
-    # script_path may be relative; make absolute
+    # script_path pode ter vindo de params ou do topo do step
     repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
     full = os.path.join(repo_root, script_path) if not os.path.isabs(script_path) else script_path
     if not os.path.exists(full):
         return {'error': 'script not found', 'path': script_path}
     try:
-        proc = subprocess.run(['python3', full, target], capture_output=True, text=True, timeout=int(os.getenv('RUNNER_TIMEOUT', '30')))
+        proc = subprocess.run(
+            ['python3', full, target],
+            capture_output=True, text=True,
+            timeout=int(os.getenv('RUNNER_TIMEOUT', '30'))
+        )
         stdout = proc.stdout.strip()
-        # try parse JSON
+        stderr = proc.stderr.strip()
+        # tentar parsear JSON do stdout
         try:
-            j = json.loads(stdout)
+            parsed = json.loads(stdout) if stdout else None
         except Exception:
-            j = {'raw_stdout': stdout}
-        return {'script': script_path, 'exit_code': proc.returncode, 'result': j}
+            parsed = None
+        result = parsed if isinstance(parsed, dict) else {'raw_stdout': stdout}
+        # sempre devolva stderr e return_code pra facilitar debug
+        return {
+            'script': script_path,
+            'exit_code': proc.returncode,
+            'stderr': stderr,
+            'result': result
+        }
     except subprocess.TimeoutExpired:
         return {'script': script_path, 'error': 'timeout'}
     except Exception as e:
         return {'script': script_path, 'error': str(e)}
+
 
 def run_playbook(playbook_path, target):
     if not allowed_target(target):
@@ -94,10 +128,10 @@ def run_playbook(playbook_path, target):
         params = step.get('params', {})
         entry = {'id': sid, 'type': stype}
         if stype == 'http_get':
-            path = params.get('path', '/')
-            entry['result'] = http_get(target, path)
+            entry['result'] = http_get_resolve(target, step)
         elif stype == 'run_script':
-            script = params.get('script')
+            # tolerante: tenta params.script, depois top-level script, depois top-level path
+            script = step.get('params', {}).get('script') or step.get('script') or step.get('path')
             entry['result'] = run_script(script, target)
         else:
             entry['result'] = {'error': 'unsupported step type'}

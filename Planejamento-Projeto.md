@@ -69,9 +69,9 @@ bug-hunter-ai/
 6. Docker Compose + Juice Shop:	Ambiente completo para testes (web, runner, minio, juice-shop).
 7. Persistência mínima (SQLite):	Jobs gravados em data/app.db, listagem e consulta funcionando (/jobs, /jobs/{id}).
 8. Retorno estruturado JSON:	Executor retorna resultados por step, com evidências e status.
+9. Integração com OpenAI (GPT-5) e Ollama:	Fazer o backend gerar scripts automaticamente com base em prompts e contexto do target (exemplo: "escreva um script Python que teste XSS básico").
 
 ## 🚧 Etapas que ainda faltam (início da fase de IA)
-9. Integração com OpenAI (GPT-5):	Fazer o backend gerar scripts automaticamente com base em prompts e contexto do target (exemplo: "escreva um script Python que teste XSS básico").
 10. PentestGPT adapter:	Criar um módulo que traduz a resposta do PentestGPT em playbooks YAML — ou seja, a IA descreve o plano de ataque, e o sistema transforma isso em steps executáveis.
 11. Segurança da geração:	Adicionar filtros (blacklist de comandos, sandbox, timeout, etc.) antes de executar qualquer código gerado.
 12. Auditoria de IA:	Registrar cada prompt enviado, resposta do modelo e script gerado no banco (para rastreabilidade).
