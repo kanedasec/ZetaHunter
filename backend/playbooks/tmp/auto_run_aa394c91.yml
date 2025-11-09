@@ -1,0 +1,7 @@
+playbook: auto-run-aa394c91
+steps:
+- id: run_generated
+  type: run_script
+  params:
+    script: /app/examples/xss_debug.py
+  timeout: 20

@@ -150,4 +150,3 @@ def sanitize_and_validate_script(script_text: str) -> Tuple[str, bool, List[str]
 def scan_script(script_text: str):
     sanitized, ok, warnings = sanitize_and_validate_script(script_text)
     return ok, warnings
-
